@@ -1,3 +1,9 @@
+"""
+Short program to confront outputs
+-This is written for a specific dataset and is not versatile
+
+"""
+
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
