@@ -3,9 +3,9 @@ Tools for atmospheric blocking data analysis written in Python.
 
 Structure:
 
-/prog/analysis :: contains code for managing nc files
+/pIB :: contains code for puncutal instantaneus blocking detection
 
-/prog/plot:: contains code for performing plots from nc files
+/PLOT:: contains code for producing plots from nc files
 
 Python libraries you need:
 
