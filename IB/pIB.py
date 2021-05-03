@@ -19,8 +19,7 @@ import matplotlib.pyplot as plt
 fn = "/home/guest/work/michele/data/ERA5/ERA5_Z500_day_r144x73_500hPa_northem_1979-2019.nc" #nome del file di partenza
 fn_out = "/home/guest/work/michele/data/ERA5/ERA5_pIB_daily_northem_1979-2019.nc"
 #____CDO FILTERS____
-#dataset from ERA5 reanalysis, containing zg at 500hPa, in dec, jan, feb , march
-#from 2015 to 2019, northern emisphere. Grid dimension: 2.5°
+#/
 
 #____IMPORT DATA____
 #store zg in a xarray
