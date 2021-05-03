@@ -1,3 +1,17 @@
+"""
+
+Punctual Instantaneus Blocking Detection
+
+This program performs the detection of the instantaneus blocking in each
+grid point of the dataset examined. It outputs a new dataset containing two new
+variables:
+
+- pIB_boolean = big matrix containing 1,0 values. 1 for blocking event, 0 for
+  not blocking event
+- pIB_frequencies = matrix without time dimension indicating for what percentual of
+  time a grid point has been marked with 1 in the matrix above.
+
+"""
 import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
