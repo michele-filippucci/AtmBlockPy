@@ -1,5 +1,4 @@
 """
-
 Punctual Instantaneus Blocking Detection
 
 This program performs the detection of the instantaneus blocking in each
@@ -16,8 +15,8 @@ import numpy as np
 import xarray as xr
 import matplotlib.pyplot as plt
 
-fn = "/home/guest/work/michele/data/ERA5/ERA5_Z500_day_r144x73_500hPa_northem_1979-2019.nc" #nome del file di partenza
-fn_out = "/home/guest/work/michele/data/ERA5/ERA5_pIB_daily_northem_1979-2019.nc"
+fn = "/home/guest/work/michele/data/ERA5/ERA5_Z500_day_djfm_r144x73_500hPa_northem_1979-2019.nc" #nome del file di partenza
+fn_out = "/home/guest/work/michele/data/ERA5/ERA5_pIB_daily_djfm_northem_1979-2019.nc"
 #____CDO FILTERS____
 #/
 
