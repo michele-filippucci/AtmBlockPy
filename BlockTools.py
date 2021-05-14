@@ -1,6 +1,14 @@
 import numpy as np
 import xarray as xr
 
+def GetIndex(ds,coord="",key=""):
+    index = 0
+    for x in ds[coord].values:
+        if str(x) == key:
+            break
+        index += 1
+    return index
+
 class BlockTools(object):
     num_of_BlockTools = 0
 
@@ -9,6 +17,15 @@ class BlockTools(object):
 
     def read(self,filename):
         self.dataset = xr.load_dataset(filename)
+
+    """
+    This function is capable of creating an nc file identical (located in fn_out)
+    to the BlockTools.dataset with additional attributes:
+    pIB_boolean and (when freq_also == True) pIB_frequencies
+    As an alternative you can change the flag "data_return" and the function
+    will return a dataset object from the class xarray containing the same
+    additional attributes
+    """
 
     def boolean_pIB(self,fn_out = "",data_return = False,freq_also = False):
         if fn_out=="" and data_return==False:
