@@ -3,9 +3,11 @@ Tools for atmospheric blocking data analysis written in Python.
 
 Structure:
 
-/IB :: contains code for puncutal instantaneus blocking detection
+/lib :: contains classes:
+	- BlockTools.py: toolkit for atmosphere blocking analysis
+	- BlockPlots.py: class containing some example of meaningful plots
 
-/PLOT:: contains code for producing plots from nc files
+main folder:: contains example of action performed with libraries
 
 Python libraries you need:
 
