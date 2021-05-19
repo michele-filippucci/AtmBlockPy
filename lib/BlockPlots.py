@@ -9,8 +9,8 @@ import xarray as xr
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
 #my own class
-from BlockTools import BlockTools
-import BlockTools
+from lib.BlockTools import BlockTools
+import lib.BlockTools as BlockTools
 
 #plot dimensions in inches
 plt.rcParams["figure.figsize"] = (16,9)
@@ -128,7 +128,7 @@ class BlockPlots(object):
            pIB="pIB_boolean",
            zg="zg",
            point_coords = [0,0], #coordinates for the point where composite is computed\
-                      #latitude -longitude
+                                 #latitude -longitude
            additional = "",
            mapcrs = ccrs.AzimuthalEquidistant(central_latitude = 90),
            datacrs = ccrs.PlateCarree(),
@@ -204,14 +204,18 @@ class BlockPlots(object):
     except:
       print("Error code 1: no output file was given or something went wrong with matplotlib")
       return 1
+
   """
-  Plot Z500 composite over blocking event in a grid point.
-  If compare_anomaly = True the function expect another variable to compare, for example
-  temperature or precipitation
+  Plot Atmospheric Blocking Tracking.
+  This function takes a .nc file and a 15 days range. The .nc file must contain an attribute
+  pIB_tracked which is a time,lon,lat matrix which is zero when  there is no blocking and
+  n when the nth blocking event is occuring.
+  The function performs a plot of the 15 days geopotential heights and colors with different
+  colors the many blocking events.
   """
   def PlotTracking(self,
            output,
-           days=["1979-01-01T09:00:00.000000000","1979-01-16T09:00:00.000000000"],
+           starting_day="2018-01-01T09:00:00.000000000",
            pIB_tracked="pIB_tracked", #name of IB matrix variable, may vary from file to file
            zg="zg", #name of zg500 matrix, may vary from file to file
            mapcrs = ccrs.PlateCarree(),
@@ -220,33 +224,30 @@ class BlockPlots(object):
 
     lons,lats,dat1,dat2 = self.check_zg_pIB("zg",pIB_tracked)
 
-    #selecting data from the desired day
-    index1 = BlockTools.GetIndex(self.main_dataset,"time",days[0])
-    index2 = BlockTools.GetIndex(self.main_dataset,"time",days[1])
+    #selecting data from the desired days
+    index1 = BlockTools.GetIndex(self.main_dataset,"time",starting_day)
+    index2 = index1 + 15
     dat1 = dat1[index1:index2,:,:]
     dat2 = dat2[index1:index2,:,:]
-    dat2 = np.ma.masked_equal(dat2,0)#mask array1 when ==0
-    min = np.amin(dat2)
-    max = np.amax(dat2)
     #multiple plots for having both contours and flags over different days
+    dat2 = BlockTools.OrderIndexes(dat2)
+    min = np.amin(dat2) #store min and max for following calculation
+    max = np.amax(dat2)
+    dat2 = np.ma.masked_equal(dat2,0) #mask array1 when ==0
     for i in range(0,15):
       ax = plt.subplot(5,3,i+1, projection=mapcrs, aspect = 1.0)
       ax.set_extent(extent, datacrs)
       ax.coastlines()
-
       #define ranges
       cs_range = np.arange(4500,6500,80) #usually it works
-      cb_range = range(0,10)
       #plot contour
+      #dat2 is normalized in 0,1
       cs_b = ax.contour(lons, lats,dat1[i,:,:], cs_range,colors="black",linewidths = 0.1 ,transform=datacrs)#sec>    plt.clabel(cs_b, colors ="black", fontsize = 5, inline ="false")
-      cb = ax.pcolor(lons,lats,dat2[i,:,:]/max,cmap="tab20",vmin=0,vmax=1, transform=datacrs)#blocking plot
-      #plt.clabel(cb, colors ="red", fontsize = 5, inline ="false")
-      #print(dat2[i,:,:]-min)
-      #print(bounds)
+      cb = ax.pcolor(lons,lats,dat2[i,:,:],cmap="tab20",vmin = 1, vmax = max+1,transform=datacrs)#blocking plot
       # Make some nice titles for the plot
-      print(min,max)
-      plt.title(days[0][0:8] + str(int(days[0][9:10])+i),fontsize = 12, loc='left')
-      #Export image
+      plt.title(starting_day[0:8] + starting_day[8:10] + ' + ' + str(i) + ' days',fontsize = 12, loc='left')
+
+    #Export image
     try:
       plt.savefig(output,bbox_inches='tight',dpi=250)
       return 0

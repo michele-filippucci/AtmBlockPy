@@ -5,8 +5,8 @@ import cartopy.feature as cfeature
 import cartopy.util as cutil
 
 #my own class
-from BlockTools import BlockTools
-from BlockPlots import BlockPlots
+from lib.BlockTools import BlockTools
+from lib.BlockPlots import BlockPlots
 
 
 from cartopy.examples.waves import sample_data
@@ -18,7 +18,6 @@ print(x)
 print(y)
 print(z)
 """
-
 fn = "/home/guest/work/michele/data/ERA5/Z500/ERA5_Z500_day_djfm_r144x73_500hPa_northem_1979-2019.nc"
 #fn2 = "/home/guest/work/michele/data/ERA5/T500/ERA5_T500_day_djfm_northem_r144x73_1979-2019.nc"
 fn2 = "/home/guest/work/michele/data/ERA5/precipitation/ERA5_precipitation_day_djfm_northem_r144x73_1979-2019.nc"
@@ -34,10 +33,10 @@ contourpIB.read(fn_out)
 #print(ds["pIB_tracked"])
 contourpIB.ContourTracking(fn_out2)
 
-plot = BlockPlots("tracking 1980-01-01T09:00:00 - 1980-01-15T09:00")
+plot = BlockPlots("tracking 1979-01-01T09:00:00")
 plot.read_main(fn_out2)
 #plot.read_additional_ds(fn2)
-print(plot.PlotTracking(output = img_out,days=["1979-01-01T09:00:00.000000000","1979-01-16T09:00:00.000000000"]))
+print(plot.PlotTracking(output = img_out,starting_day="1997-01-23T09:00:00.000000000"))
 """
 #try BlockTools
 pIB = BlockTools()

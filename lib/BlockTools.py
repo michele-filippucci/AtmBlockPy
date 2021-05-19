@@ -12,6 +12,16 @@ def GetIndex(ds,coord="",key=""):
     index += 1
   return index
 
+def OrderIndexes(arr):
+  boolarr = arr > 0
+  newarr = arr[boolarr]
+  newarr = np.unique(np.sort(newarr))
+  newval = range(1,len(newarr)+1)
+  for i in range(0,len(newarr)):
+    boolarr = arr == newarr[i]
+    arr = xr.where(boolarr, newval[i],arr)
+  return arr
+
 class BlockTools(object):
   num_of_BlockTools = 0
 
@@ -82,6 +92,10 @@ class BlockTools(object):
 
   """
   Contour Tracking
+  This function takes a .nc file containing the pIB_boolean attribute from the function
+  boolean_pIB and creates a new .nc file containing an additional attribute called 
+  pIB_tracked which is zero when blocking is not occuring and is n when the nth blocking
+  event is occuring.
   """
   def ContourTracking(self,fn_out = "",var_name = "pIB_boolean",data_return = False):
     if fn_out=="" and data_return==False:
@@ -94,17 +108,25 @@ class BlockTools(object):
       print("Error Code 1: dataset not valid. The variable " + var_name + " cannot be found")
       return 1
     arr = pIB_boolean.values[:,0,:,:]
-    structure = np.ones((3,3,3))
-    #print(np.shape(arr),np.shape(structure))
+
+    #label method from scipy.ndimage.measurements is used
+    structure = np.ones((3,3,3)) #this matrix defines what is defined as neighbour
+    #neighbour points are labeled with the same sequential number
     arr,ncomponents=label(arr,structure)
+
+    #initialize coords for new .nc
     times = pIB_boolean.coords["time"].values
     plev = pIB_boolean.coords["plev"].values
     lon = pIB_boolean.coords["lon"].values
     lat = pIB_boolean.coords["lat"].values
+    #initialize dataset object for the new .nc
     pIB_tracked = xr.DataArray(0,coords=[times,plev,lat,lon],dims = pIB_boolean.dims)
     pIB_tracked[:,:,:,:] = 0
     pIB_tracked[:,0,:,:] = arr
+    #assign dataset to self.dataset which is now updated
     self.dataset = self.dataset.assign(pIB_tracked = pIB_tracked)
+
+    #output data
     if data_return == False:
       self.dataset.to_netcdf(fn_out)
     if data_return == True:
