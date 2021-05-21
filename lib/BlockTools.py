@@ -1,6 +1,7 @@
 import numpy as np
 import xarray as xr
 from scipy.ndimage.measurements import label
+#from skimage.morphology import diamond
 
 np.set_printoptions(precision=2,threshold=np.inf)
 
@@ -107,13 +108,50 @@ class BlockTools(object):
     except:
       print("Error Code 1: dataset not valid. The variable " + var_name + " cannot be found")
       return 1
-    arr = pIB_boolean.values[:,0,:,:]
+    arr = pIB_boolean.values[:,0,:,:] 
+
+    #filtra circa 9 punti griglia
 
     #label method from scipy.ndimage.measurements is used
-    structure = np.ones((3,3,3)) #this matrix defines what is defined as neighbour
+    #structure = np.ones((3,3,3))
+    structure = [[[0,0,0],[0,1,0],[0,0,0]],\
+                 [[0,1,0],[1,1,1],[0,1,0]],\
+                 [[0,0,0],[0,1,0],[0,0,0]]] #this matrix defines what is defined as neighbour
     #neighbour points are labeled with the same sequential number
     arr,ncomponents=label(arr,structure)
-
+    #print(ncomponents)
+    #applying some filters
+    for t in np.arange(0,len(self.dataset.time.values-1)):
+      bool = arr[t,:,:] > 0
+      list = arr[t,bool]
+      #print(np.unique(list))
+      for l in np.unique(list):
+        boolarr = arr[t,:,:] == l
+        n = np.count_nonzero(boolarr)
+        #print(n)
+        #filtering cluster dimension
+        if n < 9:
+          #print("filtered")
+          arr[t,:,:] = xr.where(boolarr, 0,arr[t,:,:])
+          #print(np.count_nonzero(arr[t,:,:] == l))
+        #filtering overlap in time (TRY)
+        """
+        if t > 1:
+          boolarr1 = arr[t,:,:] == l
+          boolarr2 = arr[t-1,:,:] == l
+          boolarr = boolarr1*boolarr2
+          n = np.count_nonzero(boolarr)
+          n_ex = np.count_nonzero(boolarr2)
+          if n < n_ex/2:
+            ncomponents += 1
+            for x in range(t,t+20):
+              try:
+                boolarr = arr[x,:,:] == l
+                arr[x,:,:] = xr.where(boolarr,ncomponents,arr[x,:,:])
+              except:
+                break
+        """
+    arr = OrderIndexes(arr)
     #initialize coords for new .nc
     times = pIB_boolean.coords["time"].values
     plev = pIB_boolean.coords["plev"].values

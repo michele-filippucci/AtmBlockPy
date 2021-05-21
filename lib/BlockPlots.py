@@ -145,7 +145,7 @@ class BlockPlots(object):
         meanT = dat3.mean(0)
       except:
         try:
-          dat3 = self.additional_dataset[additional].values*1000
+          dat3 = self.additional_dataset[additional].values*24*1000
           dat3 = cutil.add_cyclic_point(dat3)
           meanT = dat3.mean(0)
         except:
@@ -215,7 +215,7 @@ class BlockPlots(object):
   """
   def PlotTracking(self,
            output,
-           starting_day="2018-01-01T09:00:00.000000000",
+           starting_day="1997-01-01T09:00:00.000000000",
            pIB_tracked="pIB_tracked", #name of IB matrix variable, may vary from file to file
            zg="zg", #name of zg500 matrix, may vary from file to file
            mapcrs = ccrs.PlateCarree(),
@@ -227,6 +227,7 @@ class BlockPlots(object):
     #selecting data from the desired days
     index1 = BlockTools.GetIndex(self.main_dataset,"time",starting_day)
     index2 = index1 + 15
+    print(index1,index2)
     dat1 = dat1[index1:index2,:,:]
     dat2 = dat2[index1:index2,:,:]
     #multiple plots for having both contours and flags over different days
@@ -234,8 +235,21 @@ class BlockPlots(object):
     min = np.amin(dat2) #store min and max for following calculation
     max = np.amax(dat2)
     dat2 = np.ma.masked_equal(dat2,0) #mask array1 when ==0
-    for i in range(0,15):
-      ax = plt.subplot(5,3,i+1, projection=mapcrs, aspect = 1.0)
+    #print(dat2)
+    # define the colormap
+    N = max
+    cmap = plt.cm.hsv
+    # extract all colors from the .jet map
+    cmaplist = [cmap(i) for i in range(cmap.N)]
+    # create the new map
+    cmap = cmap.from_list('Custom cmap', cmaplist, cmap.N)
+
+    # define the bins and normalize
+    bounds = np.linspace(0,N,N+1)
+    norm = mpl.colors.BoundaryNorm(bounds, cmap.N)
+
+    for i in range(0,6):
+      ax = plt.subplot(3,2,i+1, projection=mapcrs, aspect = 1.0)
       ax.set_extent(extent, datacrs)
       ax.coastlines()
       #define ranges
@@ -243,10 +257,12 @@ class BlockPlots(object):
       #plot contour
       #dat2 is normalized in 0,1
       cs_b = ax.contour(lons, lats,dat1[i,:,:], cs_range,colors="black",linewidths = 0.1 ,transform=datacrs)#sec>    plt.clabel(cs_b, colors ="black", fontsize = 5, inline ="false")
-      cb = ax.pcolor(lons,lats,dat2[i,:,:],cmap="tab20",vmin = 1, vmax = max+1,transform=datacrs)#blocking plot
+      cb = ax.pcolor(lons,lats,dat2[i,:,:],cmap=cmap,vmin = 0,vmax = max+1,transform=datacrs)#blocking plot
+      # create the colorbar
+      cb = plt.colorbar(cb, spacing='proportional',orientation='horizontal',ticks=bounds)
+      cb.set_label('blocking events index')
       # Make some nice titles for the plot
       plt.title(starting_day[0:8] + starting_day[8:10] + ' + ' + str(i) + ' days',fontsize = 12, loc='left')
-
     #Export image
     try:
       plt.savefig(output,bbox_inches='tight',dpi=250)
