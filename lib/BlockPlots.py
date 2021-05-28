@@ -3,6 +3,7 @@ import cartopy.feature as cfeature
 import cartopy.util as cutil
 from datetime import datetime
 import matplotlib.pyplot as plt
+from matplotlib import colors as c
 import matplotlib as mpl
 import numpy as np
 import xarray as xr
@@ -13,7 +14,7 @@ from lib.BlockTools import BlockTools
 import lib.BlockTools as BlockTools
 
 #plot dimensions in inches
-plt.rcParams["figure.figsize"] = (16,9)
+plt.rcParams["figure.figsize"] = (20,15)
 #np.set_printoptions(precision=2,threshold=np.inf)
 
 class BlockPlots(object):
@@ -134,35 +135,35 @@ class BlockPlots(object):
            datacrs = ccrs.PlateCarree(),
            colorbar_label = "",
            extent =[-180,180,20,70]):
-
+    #dat1 is zg dat2 is pIB_boolean
     lons,lats,dat1,dat2 = self.check_zg_pIB(zg,pIB)
 
     if additional != "":
       try:
         dat3 = self.additional_dataset[additional].loc[:,5e+04,:,:].values
-        #print("ok")
         dat3 = cutil.add_cyclic_point(dat3)
         meanT = dat3.mean(0)
       except:
         try:
-          dat3 = self.additional_dataset[additional].values*1000
+          dat3 = self.additional_dataset[additional].values
+          if additional == "ta":
+            dat3 = dat3*24*1000
           dat3 = cutil.add_cyclic_point(dat3)
           meanT = dat3.mean(0)
         except:
           print("Error code 1: invalid additional dataset.")
           return 1
-      #print(dat3)
+      print(np.unique(dat3)[0])
 
     counter = 0
     ilat= BlockTools.GetIndex(self.main_dataset,"lat",str(point_coords[0]))
     ilon= BlockTools.GetIndex(self.main_dataset,"lon",str(point_coords[1]))
-    #print(ilat,ilon,str(point_coords[0]),str(point_coords[1]))
     #computing composite
     for t in np.arange(0,len(self.main_dataset.time.values)):
       if dat2[t,ilat,ilon] == 0:
         dat1[t,:,:] = 0
         if additional != "":
-          dat3[t,:,:] = 0
+          dat3[t,:,:] = -1.
         counter += 1
     #update dat1
     dat1 = np.ma.masked_equal(dat1,0)#mask array1 when ==0
@@ -183,10 +184,9 @@ class BlockPlots(object):
     plt.clabel(c1_b, colors ="black", fontsize ="smaller", inline ="false")
     #update dat3 if present
     if additional != "":
-      dat3 = np.ma.masked_equal(dat3,0)
+      dat3 = np.ma.masked_equal(dat3,-1.)
       dat3 = dat3.mean(0) - meanT #temp anomaly
       max = np.amax(np.absolute(dat3))
-      print(max)
       c3_range = np.linspace(-max,+max,20,endpoint = True)
       c3 = ax.contourf(lons, lats,dat3,c3_range,cmap="coolwarm", transform=datacrs) #first ploot (float)
       cbar = plt.colorbar(c3, orientation='horizontal', pad=0, label = colorbar_label ,ticks = c3_range[1:-1], aspect=40)
@@ -215,7 +215,7 @@ class BlockPlots(object):
   """
   def PlotTracking(self,
            output,
-           starting_day="2018-01-01T09:00:00.000000000",
+           starting_day="1997-01-01T09:00:00.000000000",
            pIB_tracked="pIB_tracked", #name of IB matrix variable, may vary from file to file
            zg="zg", #name of zg500 matrix, may vary from file to file
            mapcrs = ccrs.PlateCarree(),
@@ -227,6 +227,7 @@ class BlockPlots(object):
     #selecting data from the desired days
     index1 = BlockTools.GetIndex(self.main_dataset,"time",starting_day)
     index2 = index1 + 15
+    print(index1,index2)
     dat1 = dat1[index1:index2,:,:]
     dat2 = dat2[index1:index2,:,:]
     #multiple plots for having both contours and flags over different days
@@ -234,6 +235,20 @@ class BlockPlots(object):
     min = np.amin(dat2) #store min and max for following calculation
     max = np.amax(dat2)
     dat2 = np.ma.masked_equal(dat2,0) #mask array1 when ==0
+    #print(dat2)
+    # define the colormap
+    list = ['w','g','r','m','c','y','k','tab:blue','tab:orange','tab:green',\
+            'tab:purple','tab:brown','tab:pink','tab:gray','olive','cyan','gold',\
+            'lightcoral','deeppink','lightsteelblue','lime','indigo','palegoldenrod','b']
+    N = max+1
+    cmap = c.ListedColormap(list[:N])
+    # define the bins and normalize
+    if N > 1:
+      bounds = np.linspace(0,N,N+1)
+    else:
+      bounds = [0,1,2]
+    norm = mpl.colors.BoundaryNorm(bounds, N)
+
     for i in range(0,15):
       ax = plt.subplot(5,3,i+1, projection=mapcrs, aspect = 1.0)
       ax.set_extent(extent, datacrs)
@@ -243,10 +258,12 @@ class BlockPlots(object):
       #plot contour
       #dat2 is normalized in 0,1
       cs_b = ax.contour(lons, lats,dat1[i,:,:], cs_range,colors="black",linewidths = 0.1 ,transform=datacrs)#sec>    plt.clabel(cs_b, colors ="black", fontsize = 5, inline ="false")
-      cb = ax.pcolor(lons,lats,dat2[i,:,:],cmap="tab20",vmin = 1, vmax = max+1,transform=datacrs)#blocking plot
+      cb = ax.pcolor(lons,lats,dat2[i,:,:],cmap=cmap,vmin = 0,vmax = N,transform=datacrs)#blocking plot
+      # create the colorbar
+      cb = plt.colorbar(cb, spacing='proportional',orientation='horizontal',ticks=bounds)
+      cb.set_label('blocking event label')
       # Make some nice titles for the plot
       plt.title(starting_day[0:8] + starting_day[8:10] + ' + ' + str(i) + ' days',fontsize = 12, loc='left')
-
     #Export image
     try:
       plt.savefig(output,bbox_inches='tight',dpi=250)
