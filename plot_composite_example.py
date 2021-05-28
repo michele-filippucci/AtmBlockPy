@@ -21,7 +21,6 @@ fn2 = "/home/guest/work/michele/data/ERA5/T500/"+\
 #      "ERA5_precipitation_day_djfm_northem_r144x73_1979-2018.nc"
 img_out = "/home/guest/work/michele/prog/plots/composites/"+\
           "ZG500CompositeTemperature55N10E_1979-2019_NorthPolarStereo.png"
-
 print("Starting job")
 #try composite precipitation
 plot = BlockPlots("ZG500 composite vs temp anomaly, 55 N, 10 E")

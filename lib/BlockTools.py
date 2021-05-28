@@ -129,24 +129,7 @@ class BlockTools(object):
         #filtering cluster dimension
         if n < 9:
           arr[t,:,:] = xr.where(boolarr, 0,arr[t,:,:])
-        """
-        #filtering overlap in time (TRY)
-        if t > 1:
-          boolarr1 = arr[t,:,:] == l
-          boolarr2 = arr[t-1,:,:] == l
-          boolarr = boolarr1*boolarr2
-          n = np.count_nonzero(boolarr)
-          n_ex = np.count_nonzero(boolarr2)
-          if n < n_ex/4:
-            ncomponents += 1
-            for x in range(t,t+20):
-              try:
-                boolarr = arr[x,:,:] == l
-                arr[x,:,:] = xr.where(boolarr,ncomponents,arr[x,:,:])
-                list.append(ncomponents)
-              except:
-                break
-         """
+
     arr = OrderIndexes(arr)
     #initialize coords for new .nc
     times = pIB_boolean.coords["time"].values
@@ -180,7 +163,7 @@ class BlockTools(object):
       return 1
 
     #loop over time
-    max = 1
+    max = 0
     lastlat = len(self.dataset.lat.values) -1
     lastlon = len(self.dataset.lon.values) -1
     for t in np.arange(0,len(self.dataset.time.values-1)):
@@ -200,7 +183,7 @@ class BlockTools(object):
       arr[t,:,:] = xr.where(arr[t,:,:] > 0, arr[t,:,:] + max , arr[t,:,:])
 
       #making it periodic in longitude
-      for j in np.arange(lastlat):
+      for j in range(0,lastlat):
         if arr[t,j,lastlon] > 0 and arr[t,j,0] > 0:
           arr[t,:,:] = xr.where(arr[t,:,:] == arr[t,j,lastlon], arr[t,j,0], arr[t,:,:])
 
@@ -232,10 +215,10 @@ class BlockTools(object):
             n = np.count_nonzero(boolarr)
             n_ex = np.count_nonzero(boolarr1)
             n_new = np.count_nonzero(boolarr2)
-            if n > n_ex/2: #or n > n_new/2: #50% overlap
+            if n > n_ex/2 or n > n_new/2: #50% overlap
               #new label which is always different
               arr[t,:,:] = xr.where(boolarr2,l1,arr[t,:,:])
-        arr[:,:,:] = OrderIndexes(arr[:,:,:])
+    arr[:,:,:] = OrderIndexes(arr[:,:,:])
 
     """
     PERSISTENCE MODULE
