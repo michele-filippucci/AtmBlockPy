@@ -34,17 +34,19 @@ class BlockPlots(object):
   Some data controls for zg and pIB variables.
   Set up for following plots.
   """
-  def check_freq(self,freq=""):
+
+  def check_freq_pIB(self,freq="")
     try:
       freq = self.main_dataset[freq]
       string = "data read successfully"
-      print(string)
     except:
       string = string = "Error code 2: frequency was not found. " +\
       "Hint: use read_main() to load data with right attributes."
       print(self.main_dataset)
       print(string)
       return 2
+
+    freq = self.main_dataset[freq]
 
     #preparing horizontal positions
     lats = self.main_dataset.lat.values
@@ -53,9 +55,10 @@ class BlockPlots(object):
     #adding an element to longitude direction as needed by cartopy stereographic transforms
     if lons[len(lons)-1] != lons[0]:
       lons = np.append(lons,180-10**(-6))#slightly different for avoiding contour bug
-      freq = cutil.add_cyclic_point(freq)
-    return lons,lats,freq
+      freq = cutil.add_cyclic_point(dat1)
+      dat2 = cutil.add_cyclic_point(dat2)
 
+    return lons,lats,dat1
 
   def check_zg_pIB(self,zg="",pIB=""):
     try:
@@ -144,14 +147,14 @@ class BlockPlots(object):
 
   def PlotFreqZ500(self,\
                    output,\
-                   mapcrs=ccrs.PlateCarree(),
+                   mapcrs=PlateCarree(),
                    freq = "pIB_frequencies"):
-
-    lons,lats,freq_z=self.check_freq(freq)
+    lats = .lon.data
+    freq_z = ds["pIB_frequencies"].values
     freq = freq_z[0,:,:]
 
     # Set up the projection that will be used for plotting the map
-    mapcrs = mapcrs
+    mapcrs = ccrs.PlateCarree()
     # Set up the projection of the data; if lat/lon then PlateCarree is what you want
     datacrs = ccrs.PlateCarree()
 
@@ -164,16 +167,11 @@ class BlockPlots(object):
     cs = ax.contourf(lons, lats, freq,cmap=plt.cm.BuPu,transform=datacrs)
 
     # Make some nice titles for the plot (one right, one left)
-    plt.title(self.plot_title, loc='left')
+    plt.title('500-hPa ERA5 Inst Puncutal Blocking frequency 2015/2019 djfm', loc='left')
     plt.colorbar(cs, orientation='horizontal', pad=0, label = "% over the period" , aspect=50)
     #plt.colorbar.label("% over the period")
-    #Export image
-    try:
-      plt.savefig(output,bbox_inches='tight',dpi=250)
-      return 0
-    except:
-      print("Error code 1: no output file was given or something went wrong with matplotlib")
-      return 1
+    # Show image
+    plt.show()
 
   """
   Plot Z500 composite over blocking event in a grid point.

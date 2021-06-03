@@ -1,7 +1,6 @@
 import numpy as np
 import xarray as xr
 from scipy.ndimage.measurements import label
-import cartopy.util as cutil
 
 np.set_printoptions(precision=2,threshold=np.inf)
 
@@ -41,12 +40,7 @@ class BlockTools(object):
   additional attributes
   """
 
-  def boolean_pIB(self,fn_out = "",\
-                  data_return = False,\
-                  freq_also = False,\
-                  mer_gradient_filter = False,\
-                  long_filter = False):
-
+  def boolean_pIB(self,fn_out = "",data_return = False,freq_also = False):
     if fn_out=="" and data_return==False:
       string = "Specify the kind of output you want"
       print(string)
@@ -59,12 +53,6 @@ class BlockTools(object):
       string = "zg variable was not found.\n\ Hint: use read() to load data."
       print(string)
       return 0
-
-    #define XArray using the costructor for an appropriate output
-    times = zg.coords["time"].values
-    plev = zg.coords["plev"].values
-    lon = zg.coords["lon"].values
-    lat = zg.coords["lat"].values
 
     #____CHECK GEOP HEIGHT____
     #ERA5 dataset uses geopotential, not height
@@ -80,39 +68,15 @@ class BlockTools(object):
     #using where function from xarray
     #first term is GHGN condition, second term is GHGS condition. Tuples are multiplied
     #(no matrix product)
-    if mer_gradient_filter == False:
-      TuplepIB = xr.where(GHGN < -10.0, 1.0, 0.0) * xr.where(GHGS > 0., 1.0 , 0.0)
-    #filter for meridional gradient
-    if mer_gradient_filter == True:
-      GHGS2 = (+ zg.loc[:,:,15:60,:].values - zg.loc[:,:,0:45,:].values)/15.0
-      TuplepIB = xr.where(GHGS2 < -5,1.0,0.0)*xr.where(GHGN < -10.0, 1.0, 0.0)*\
-                 xr.where(GHGS > 0., 1.0 , 0.0)
-    check = TuplepIB
-    #15 degrees continuous longitude filter
-    if long_filter == True:
-      temp1 = TuplepIB
-      temp2 = temp1
-      shift = 3
-      for i in range(len(lon)):
-        #shift 3 to the right
-        if i < shift:
-          temp1[:,:,:,i] = TuplepIB[:,:,:,len(lon)-shift+i]
-        else:
-          temp1[:,:,:,i] = TuplepIB[:,:,:,i-shift]
-        #shift 3 to the left
-        if i < len(lon)-shift:
-          temp2[:,:,:,i] = TuplepIB[:,:,:,i+shift]
-        else:
-          temp2[:,:,:,i] = TuplepIB[:,:,:,i-len(lon)+shift]
-      print(temp1[50,0,:,:]*temp2[50,0,:,:]-TuplepIB[50,0,:,:])
-      TuplepIB = temp1*temp2
-      print(np.unique(TuplepIB-check))
-      #pIB = pIB.loc[:,:,:,(-180-7.5):(180-7.5)]*pIB.loc[:,:,:,(-180+7.5):(180+7.5)]
+    TuplepIB = xr.where(GHGN < -10.0, 1.0, 0.0) * xr.where(GHGS > 0., 1.0 , 0.0)
 
     #define XArray using the costructor for an appropriate output
+    times = zg.coords["time"].values
+    plev = zg.coords["plev"].values
+    lon = zg.coords["lon"].values
+    lat = zg.coords["lat"].values
     pIB = xr.DataArray(0,coords=[times,plev,lat,lon],dims = zg.dims)
     pIB.loc[:,:,30:75,:] = TuplepIB
-
     self.dataset = self.dataset.assign(pIB_boolean = pIB)
     if freq_also == True:
       pIB_f = sum(pIB)*100/pIB.values.shape[0]
