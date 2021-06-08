@@ -6,7 +6,7 @@ import cartopy.util as cutil
 
 #my own class
 from lib.BlockTools import BlockTools
-from lib.BlockPlots import BlockPlots
+import lib.BlockPlots as BP
 import lib.BlockTools as BT
 
 from cartopy.examples.waves import sample_data
@@ -16,6 +16,7 @@ start_time = time.time()
 
 fn = "/home/guest/work/michele/data/ERA5/Z500/"+\
      "ERA5_Z500_day_djfm_r144x73_500hPa_northem_1979-2019.nc"
+#fn = input("Insert input file: ")
 fn_out = "/home/guest/work/michele/data/ERA5/processed/"+\
          "ERA5_pIB_daily_wfilters_djfm_northem_1979-2019.nc"
 img_out = "/home/guest/work/michele/prog/plots/filters/"+\
@@ -25,11 +26,11 @@ img_out = "/home/guest/work/michele/prog/plots/filters/"+\
 #BlockTools
 pIB = BlockTools()
 pIB.read(fn)
-print(pIB.boolean_pIB(fn_out,freq_also = True,mer_gradient_filter = False))
+print(pIB.TM90(fn_out,freq_also = True,mer_gradient_filter = False))
 
 #BlockPlots
-freqPlot = BlockPlots("1979-2019 Blocking Freq w long_filter")
-freqPlot.read_main(fn_out)
-print(freqPlot.PlotFreqZ500(img_out))
+ds = xr.load_dataset(fn_out)
+print(BP.PlotFreqZ500(ds=ds,output=img_out,plot_title="1979-2019 Blocking Freq w long_filter"))
 
 print("--- %s seconds ---" % (time.time() - start_time))
+

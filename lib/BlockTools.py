@@ -28,6 +28,9 @@ class BlockTools(object):
   def __init__(self):
     BlockTools.num_of_BlockTools += 1
 
+  def load_data(self,ds):
+    self.dataset = ds
+
   def read(self,filename):
     self.dataset = xr.load_dataset(filename)
 
@@ -41,11 +44,11 @@ class BlockTools(object):
   additional attributes
   """
 
-  def boolean_pIB(self,fn_out = "",\
-                  data_return = False,\
-                  freq_also = False,\
-                  mer_gradient_filter = False,\
-                  long_filter = False):
+  def TM90(self,fn_out = "",\
+           data_return = False,\
+           freq_also = False,\
+           mer_gradient_filter = False,\
+           long_filter = False):
 
     if fn_out=="" and data_return==False:
       string = "Specify the kind of output you want"
@@ -113,14 +116,13 @@ class BlockTools(object):
     pIB = xr.DataArray(0,coords=[times,plev,lat,lon],dims = zg.dims)
     pIB.loc[:,:,30:75,:] = TuplepIB
 
-    self.dataset = self.dataset.assign(pIB_boolean = pIB)
+    self.dataset = self.dataset.assign(TM90 = pIB)
     if freq_also == True:
       pIB_f = sum(pIB)*100/pIB.values.shape[0]
-      self.dataset = self.dataset.assign(pIB_frequencies = pIB_f)
+      self.dataset = self.dataset.assign(TM90_freq = pIB_f)
     if data_return == False:
       self.dataset.to_netcdf(fn_out)
     if data_return == True:
-      print(string)
       return self.dataset
     else:
       return 0

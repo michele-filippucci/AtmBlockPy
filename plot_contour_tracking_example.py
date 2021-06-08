@@ -6,11 +6,11 @@ import cartopy.util as cutil
 
 #my own class
 from lib.BlockTools import BlockTools
-from lib.BlockPlots import BlockPlots
+import lib.BlockPlots as BP
 import lib.BlockTools as BT
 
 from cartopy.examples.waves import sample_data
-list = ["01-01","01-15","02-01","02-15","03-01","03-15"]
+list = ["01-01"] #,"01-15","02-01","02-15","03-01","03-15"]
 import time
 start_time = time.time()
 
@@ -33,9 +33,8 @@ for str in list:
   contourpIB.ContourTracking2D(fn_out,pers=4)
   print("Data created")
   """
-  plot = BlockPlots("tracking 1997-"+str+"T09:00:00")
-  plot.read_main(fn_out)
-  print(plot.PlotTracking(output = img_out,\
+  ds = xr.load_dataset(fn_out)
+  print(BP.PlotTracking(ds=ds,output = img_out,\
         starting_day="1997-"+str+"T09:00:00.000000000"))
   print("Plot produced")
 
