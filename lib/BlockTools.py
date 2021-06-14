@@ -1,6 +1,9 @@
 import numpy as np
 import xarray as xr
 from scipy.ndimage.measurements import label
+from scipy.ndimage.measurements import center_of_mass
+import cartopy.util as cutil
+import sys
 
 np.set_printoptions(precision=2,threshold=np.inf)
 
@@ -21,15 +24,43 @@ def OrderIndexes(arr):
     arr = xr.where(arr == newarr[i], newval[i],arr)
   return arr
 
+"""
+This function returns the coordinates in space of the center of mass
+of a blocking event. The object returned is a list of the coordinates
+at each time step.
+"""
+
+def CenterofMass(tuple,label,grid=2.5):
+#  print("CIAOOOOOOOOOOOOOOOOOOO")
+  time = np.shape(tuple)[0]
+  x = []
+  y = []
+  bool = xr.where(tuple == label,1.,0.)
+  for t in range(time):
+    try:
+      cm = center_of_mass(bool[t,:,:])
+    except:
+      print("The label " + label + " isn't present")
+      break
+#    if len(np.unique(bool[t,:,:]))==1:
+#      break
+    cm = np.array([cm[0]*2.5,cm[1]*2.5-180])
+    x.append(cm[0])
+    y.append(cm[1])
+  return x,y
+
 class BlockTools(object):
   num_of_BlockTools = 0
 
   def __init__(self):
     BlockTools.num_of_BlockTools += 1
 
+  def load_data(self,ds):
+    self.dataset = ds
+
   def read(self,filename):
     self.dataset = xr.load_dataset(filename)
-
+    return self.dataset
 
   """
   This function is capable of creating an nc file identical (located in fn_out)
@@ -40,7 +71,12 @@ class BlockTools(object):
   additional attributes
   """
 
-  def boolean_pIB(self,fn_out = "",data_return = False,freq_also = False):
+  def TM90(self,fn_out = "",\
+           data_return = False,\
+           freq_also = False,\
+           mer_gradient_filter = False,\
+           long_filter = False):
+
     if fn_out=="" and data_return==False:
       string = "Specify the kind of output you want"
       print(string)
@@ -53,6 +89,12 @@ class BlockTools(object):
       string = "zg variable was not found.\n\ Hint: use read() to load data."
       print(string)
       return 0
+
+    #define XArray using the costructor for an appropriate output
+    times = zg.coords["time"].values
+    plev = zg.coords["plev"].values
+    lon = zg.coords["lon"].values
+    lat = zg.coords["lat"].values
 
     #____CHECK GEOP HEIGHT____
     #ERA5 dataset uses geopotential, not height
@@ -68,26 +110,93 @@ class BlockTools(object):
     #using where function from xarray
     #first term is GHGN condition, second term is GHGS condition. Tuples are multiplied
     #(no matrix product)
-    TuplepIB = xr.where(GHGN < -10.0, 1.0, 0.0) * xr.where(GHGS > 0., 1.0 , 0.0)
+    if mer_gradient_filter == False:
+      TuplepIB = xr.where(GHGN < -10.0, 1.0, 0.0) * xr.where(GHGS > 0., 1.0 , 0.0)
+    #filter for meridional gradient
+    if mer_gradient_filter == True:
+      GHGS2 = (+ zg.loc[:,:,15:60,:].values - zg.loc[:,:,0:45,:].values)/15.0
+      TuplepIB = xr.where(GHGS2 < -5,1.0,0.0)*xr.where(GHGN < -10.0, 1.0, 0.0)*\
+                 xr.where(GHGS > 0., 1.0 , 0.0)
+    check = TuplepIB
+    #15 degrees continuous longitude filter
+    if long_filter == True:
+      temp1 = TuplepIB
+      temp2 = temp1
+      shift = 3
+      for i in range(len(lon)):
+        #shift 3 to the right
+        if i < shift:
+          temp1[:,:,:,i] = TuplepIB[:,:,:,len(lon)-shift+i]
+        else:
+          temp1[:,:,:,i] = TuplepIB[:,:,:,i-shift]
+        #shift 3 to the left
+        if i < len(lon)-shift:
+          temp2[:,:,:,i] = TuplepIB[:,:,:,i+shift]
+        else:
+          temp2[:,:,:,i] = TuplepIB[:,:,:,i-len(lon)+shift]
+      print(temp1[50,0,:,:]*temp2[50,0,:,:]-TuplepIB[50,0,:,:])
+      TuplepIB = temp1*temp2
+      print(np.unique(TuplepIB-check))
+      #pIB = pIB.loc[:,:,:,(-180-7.5):(180-7.5)]*pIB.loc[:,:,:,(-180+7.5):(180+7.5)]
 
     #define XArray using the costructor for an appropriate output
-    times = zg.coords["time"].values
-    plev = zg.coords["plev"].values
-    lon = zg.coords["lon"].values
-    lat = zg.coords["lat"].values
     pIB = xr.DataArray(0,coords=[times,plev,lat,lon],dims = zg.dims)
     pIB.loc[:,:,30:75,:] = TuplepIB
-    self.dataset = self.dataset.assign(pIB_boolean = pIB)
+
+    self.dataset = self.dataset.assign(TM90 = pIB)
     if freq_also == True:
       pIB_f = sum(pIB)*100/pIB.values.shape[0]
-      self.dataset = self.dataset.assign(pIB_frequencies = pIB_f)
+      self.dataset = self.dataset.assign(TM90_freq = pIB_f)
     if data_return == False:
       self.dataset.to_netcdf(fn_out)
     if data_return == True:
-      print(string)
       return self.dataset
     else:
       return 0
+
+  """
+  Tibaldi and Molteni Index
+  This function takes a .nc file containing z500 variable and computes the Tibaldi
+  and Monteni index for the latitude 60° N.
+  It outputs a .dat file containing the design matrix (features, boolean label) needed
+  for training a neural network.
+  """
+
+  def TM(self,
+         output):
+    #checking if dataset is right
+    try:
+      zg = self.dataset["zg"]
+      string = "data successfully received"
+    except:
+      string = "zg variable was not found.\n\ Hint: use read() to load data."
+      print(string)
+      return 0
+    #____CHECK GEOP HEIGHT____
+    #ERA5 dataset uses geopotential, not height
+    if zg.values[0,0,0,0] > 10000:
+        zg = zg.values/9.80665
+    #.values gives tuples
+    print(self.dataset["lat"])
+    N = GetIndex(self.dataset,"lat","75.0") #north
+    C = GetIndex(self.dataset,"lat","60.0") #center
+    S = GetIndex(self.dataset,"lat","45.0") #south
+    print(N,C,S)
+    file = open(output, "a")
+    for i in range(len(self.dataset["time"])):
+      for j in range(len(self.dataset["lon"])):
+        string = ""
+        for k in range(12):
+          string += str(zg[i,0,S+k,j]) + " "
+        GHGS = (+ zg[i,0,C,k] - zg[i,0,S,k])/15.0
+        GHGN = (- zg[i,0,C,k] + zg[i,0,N,k])/15.0
+        flag = int(GHGN < -10.0) * int(GHGS > 0.)
+        string += str(flag)
+#        print(string)
+        file.write(string + "\n")
+    file.close()
+    return 0
+
 
   """
   Contour Tracking
