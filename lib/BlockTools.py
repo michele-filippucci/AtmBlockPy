@@ -1,7 +1,9 @@
 import numpy as np
 import xarray as xr
 from scipy.ndimage.measurements import label
+from scipy.ndimage.measurements import center_of_mass
 import cartopy.util as cutil
+import sys
 
 np.set_printoptions(precision=2,threshold=np.inf)
 
@@ -22,6 +24,31 @@ def OrderIndexes(arr):
     arr = xr.where(arr == newarr[i], newval[i],arr)
   return arr
 
+"""
+This function returns the coordinates in space of the center of mass
+of a blocking event. The object returned is a list of the coordinates
+at each time step.
+"""
+
+def CenterofMass(tuple,label,grid=2.5):
+#  print("CIAOOOOOOOOOOOOOOOOOOO")
+  time = np.shape(tuple)[0]
+  x = []
+  y = []
+  bool = xr.where(tuple == label,1.,0.)
+  for t in range(time):
+    try:
+      cm = center_of_mass(bool[t,:,:])
+    except:
+      print("The label " + label + " isn't present")
+      break
+#    if len(np.unique(bool[t,:,:]))==1:
+#      break
+    cm = np.array([cm[0]*2.5,cm[1]*2.5-180])
+    x.append(cm[0])
+    y.append(cm[1])
+  return x,y
+
 class BlockTools(object):
   num_of_BlockTools = 0
 
@@ -33,7 +60,7 @@ class BlockTools(object):
 
   def read(self,filename):
     self.dataset = xr.load_dataset(filename)
-
+    return self.dataset
 
   """
   This function is capable of creating an nc file identical (located in fn_out)
@@ -126,6 +153,50 @@ class BlockTools(object):
       return self.dataset
     else:
       return 0
+
+  """
+  Tibaldi and Molteni Index
+  This function takes a .nc file containing z500 variable and computes the Tibaldi
+  and Monteni index for the latitude 60° N.
+  It outputs a .dat file containing the design matrix (features, boolean label) needed
+  for training a neural network.
+  """
+
+  def TM(self,
+         output):
+    #checking if dataset is right
+    try:
+      zg = self.dataset["zg"]
+      string = "data successfully received"
+    except:
+      string = "zg variable was not found.\n\ Hint: use read() to load data."
+      print(string)
+      return 0
+    #____CHECK GEOP HEIGHT____
+    #ERA5 dataset uses geopotential, not height
+    if zg.values[0,0,0,0] > 10000:
+        zg = zg.values/9.80665
+    #.values gives tuples
+    print(self.dataset["lat"])
+    N = GetIndex(self.dataset,"lat","75.0") #north
+    C = GetIndex(self.dataset,"lat","60.0") #center
+    S = GetIndex(self.dataset,"lat","45.0") #south
+    print(N,C,S)
+    file = open(output, "a")
+    for i in range(len(self.dataset["time"])):
+      for j in range(len(self.dataset["lon"])):
+        string = ""
+        for k in range(12):
+          string += str(zg[i,0,S+k,j]) + " "
+        GHGS = (+ zg[i,0,C,k] - zg[i,0,S,k])/15.0
+        GHGN = (- zg[i,0,C,k] + zg[i,0,N,k])/15.0
+        flag = int(GHGN < -10.0) * int(GHGS > 0.)
+        string += str(flag)
+#        print(string)
+        file.write(string + "\n")
+    file.close()
+    return 0
+
 
   """
   Contour Tracking

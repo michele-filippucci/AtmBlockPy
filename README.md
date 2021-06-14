@@ -5,9 +5,11 @@ Structure:
 
 /lib :: contains classes:
 	- BlockTools.py: toolkit for atmosphere blocking analysis
-	- BlockPlots.py: class containing some example of meaningful plots
+	- BlockPlots.py: file containing some functions for performing
+          plots
 
-main folder:: contains example of action performed with libraries
+main folder:: contains example of action performed with libraries and 
+files i use for my analysis.
 
 Python libraries you need:
 
